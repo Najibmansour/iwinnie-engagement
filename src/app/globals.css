@@ -1,8 +1,70 @@
 @import "tailwindcss";
 
+/* Custom Fonts */
+@font-face {
+  font-family: 'Arimo';
+  src: url('/fonts/arimo/Arimo-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Better Saturday';
+  src: url('/fonts/better sat/Better Saturday Personal Use Only.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
+  /* Light theme variables */
   --background: #ffffff;
   --foreground: #171717;
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --text-primary: #171717;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --accent-primary: #A084E2;
+  --accent-secondary: #A183E3;
+  --accent-hover: #A083E2;
+  --border-color: #e5e7eb;
+  --input-bg: #f9fafb;
+  --progress-bg: #e5e7eb;
+  --error-bg: #fef2f2;
+  --error-border: #fecaca;
+  --error-text: #dc2626;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+  --success-text: #16a34a;
+  
+  /* Custom Font Variables */
+  --font-arimo: 'Arimo', sans-serif;
+  --font-better-saturday: 'Better Saturday', cursive;
+}
+
+[data-theme="dark"] {
+  /* Dark theme variables */
+  --background: #000000;
+  --foreground: #ffffff;
+  --card-bg: #1f2937;
+  --card-border: #374151;
+  --text-primary: #ffffff;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --accent-primary: #A084E2;
+  --accent-secondary: #A183E3;
+  --accent-hover: #A083E2;
+  --border-color: #374151;
+  --input-bg: #374151;
+  --progress-bg: #4b5563;
+  --error-bg: rgba(239, 68, 68, 0.1);
+  --error-border: #dc2626;
+  --error-text: #f87171;
+  --success-bg: rgba(34, 197, 94, 0.1);
+  --success-border: #16a34a;
+  --success-text: #4ade80;
 }
 
 @theme inline {
@@ -10,17 +72,13 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-arimo: var(--font-arimo);
+  --font-better-saturday: var(--font-better-saturday);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-arimo), Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }

@@ -12,7 +12,10 @@
   "dependencies": {
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.0"
+    "next": "15.5.0",
+    "@aws-sdk/client-s3": "^3.540.0",
+    "@aws-sdk/s3-request-presigner": "^3.540.0",
+    "lucide-react": "^0.468.0"
   },
   "devDependencies": {
     "typescript": "^5",
