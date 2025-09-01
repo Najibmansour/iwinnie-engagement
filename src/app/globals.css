@@ -24,10 +24,10 @@
   --card-bg: #ffffff;
   --card-border: #e5e7eb;
   --text-primary: #171717;
-  --text-secondary: #6b7280;
+  --text-secondary: #000000;
   --text-muted: #9ca3af;
-  --accent-primary: #A084E2;
-  --accent-secondary: #A183E3;
+  --accent-primary: #1f113e;
+  --accent-secondary: #402d6d;
   --accent-hover: #A083E2;
   --border-color: #e5e7eb;
   --input-bg: #f9fafb;
@@ -53,7 +53,7 @@
   --text-primary: #ffffff;
   --text-secondary: #d1d5db;
   --text-muted: #9ca3af;
-  --accent-primary: #A084E2;
+  --accent-primary: #1f113e;
   --accent-secondary: #A183E3;
   --accent-hover: #A083E2;
   --border-color: #374151;
@@ -76,9 +76,17 @@
   --font-better-saturday: var(--font-better-saturday);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-arimo), Arial, Helvetica, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  body {
+    background: url('/images/image.png') no-repeat center center fixed;
+    background-size: cover;
+    color: var(--foreground);
+    font-family: var(--font-arimo), Arial, Helvetica, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+
+
+h1 { 
+  line-height: 3;
+  
 }

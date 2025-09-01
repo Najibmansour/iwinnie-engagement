@@ -102,19 +102,18 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--background)] via-[var(--background)] to-[var(--card-bg)]">
+    <div className="min-h-screen ">
       <ThemeToggle />
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Heart className="w-8 h-8 text-[var(--accent-primary)]" />
-            <h1 className="font-better-saturday text-4xl font-bold bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] bg-clip-text text-transparent">
-              iWinnie Engagement
+            {/* <Heart className="w-8 h-8 text-[var(--accent-primary)]" /> */}
+            <h1 className="font-better-saturday px-5 text-5xl font-bold bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] bg-clip-text text-transparent">
+              Omar and Lynn Engagement
             </h1>
-            <Heart className="w-8 h-8 text-[var(--accent-primary)]" />
+            {/* <Heart className="w-8 h-8 text-[var(--accent-primary)]" /> */}
           </div>
-          <p className="text-lg text-[var(--text-secondary)] max-w-2xl mx-auto">
+          <p className="text-lg text-[var(--accent-primary)] font-arimo  max-w-2xl mx-auto">
             Share your special moments with us! Upload photos from your
             engagement celebration and create beautiful memories together.
           </p>
@@ -122,7 +121,7 @@ export default function Home() {
 
         {/* Upload Section */}
         <div className="max-w-4xl mx-auto">
-          <div className="bg-[var(--card-bg)] rounded-2xl shadow-xl p-8 mb-8 border border-[var(--card-border)]">
+          <div className="bg-[var(--card-bg)] opacity-60 rounded-2xl shadow-xl p-8 mb-8 border border-[var(--card-border)]">
             <div className="text-center mb-6">
               <Camera className="w-12 h-12 text-[var(--accent-primary)] mx-auto mb-4" />
               <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-2">
@@ -134,7 +133,7 @@ export default function Home() {
               </p>
             </div>
 
-            {/* File Upload Area */}
+            {/* File Uload */}
             <div className="border-2 border-dashed border-[var(--accent-primary)] rounded-xl p-8 text-center hover:border-[var(--accent-hover)] transition-colors">
               <input
                 type="file"
@@ -174,7 +173,7 @@ export default function Home() {
                       </div>
                       <button
                         onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 right-2 bg-red-800 text-white rounded-full p-1  md:opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         ×
                       </button>
@@ -242,8 +241,8 @@ export default function Home() {
             )}
           </div>
 
-          {/* Uploaded Photos Gallery */}
-          {uploadedFiles.length > 0 && (
+          {/* optional Uploaded Photos Gallery */}
+          {/* {uploadedFiles.length > 0 && (
             <div className="bg-[var(--card-bg)] rounded-2xl shadow-xl p-8 border border-[var(--card-border)]">
               <div className="flex items-center gap-2 mb-6">
                 <Users className="w-6 h-6 text-[var(--accent-primary)]" />
@@ -271,12 +270,12 @@ export default function Home() {
                 ))}
               </div>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-12 text-[var(--text-muted)]">
-          <p className="mb-4">Made with ❤️ for Omar and Lynn</p>
+        <div className="text-center mt-12 text-[var(--accent-primary)]">
+          <p className="mb-4">Made with ❤️ Omar and Lynn</p>
           {/* <Link
             href="/gallery"
             className="inline-flex items-center gap-2 text-[var(--accent-primary)] hover:text-[var(--accent-hover)] font-medium"

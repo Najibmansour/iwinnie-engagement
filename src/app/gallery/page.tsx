@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import ThemeToggle from "../components/ThemeToggle";
+import Image from "next/image";
 
 interface Photo {
   id: string;
@@ -79,6 +80,7 @@ export default function Gallery() {
       }
 
       const data: PhotosResponse = await response.json();
+      console.log(data);
 
       if (isLoadMore) {
         setPhotos((prev) => [...prev, ...data.photos]);
@@ -159,13 +161,13 @@ export default function Gallery() {
             Back to Upload
           </Link>
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Heart className="w-8 h-8 text-[var(--accent-primary)]" />
+            {/* <Heart className="w-8 h-8 text-[var(--accent-primary)]" /> */}
             <h1 className="font-better-saturday text-4xl font-bold bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] bg-clip-text text-transparent">
               Photo Gallery
             </h1>
-            <Heart className="w-8 h-8 text-[var(--accent-primary)]" />
+            {/* <Heart className="w-8 h-8 text-[var(--accent-primary)]" /> */}
           </div>
-          <p className="text-lg text-[var(--text-secondary)]">
+          <p className="text-lg text-[var(--accent-primary)] font-arimo ">
             All the beautiful moments shared by friends and family
           </p>
         </div>
@@ -217,12 +219,14 @@ export default function Gallery() {
                     <div className="bg-[var(--card-bg)] p-3 pb-8 rounded-sm shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-[var(--card-border)]">
                       {/* Image Container */}
                       <div className="aspect-square bg-[var(--input-bg)] relative overflow-hidden mb-3">
-                        <img
+                        <Image
                           src={photo.url}
                           alt={photo.name}
+                          width={1000}
+                          height={1000}
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
+                        {/* <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -232,7 +236,7 @@ export default function Gallery() {
                           >
                             <Download className="w-4 h-4" />
                           </button>
-                        </div>
+                        </div> */}
                       </div>
 
                       {/* Polaroid Caption Area */}
