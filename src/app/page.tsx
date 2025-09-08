@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Upload,
   Camera,
@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import ThemeToggle from "./components/ThemeToggle";
+import NameEntryModal from "./components/NameEntryModal";
+import NameChangeButton from "./components/NameChangeButton";
+import { useUser } from "./contexts/UserContext";
 
 interface UploadedFile {
   id: string;
@@ -29,6 +31,16 @@ export default function Home() {
   }>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showNameModal, setShowNameModal] = useState(false);
+
+  const { userName, hasEnteredName } = useUser();
+
+  // Show name modal for first-time visitors
+  useEffect(() => {
+    if (!hasEnteredName) {
+      setShowNameModal(true);
+    }
+  }, [hasEnteredName]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const imageFiles = acceptedFiles.filter((file) =>
@@ -60,6 +72,7 @@ export default function Home() {
         const file = files[i];
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("userName", userName || "");
 
         setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
 
@@ -103,7 +116,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen ">
-      <ThemeToggle />
+      <div className="flex justify-start items-center p-4">
+        <NameChangeButton />
+      </div>
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -285,6 +300,12 @@ export default function Home() {
           </Link> */}
         </div>
       </div>
+
+      {/* Name Entry Modal */}
+      <NameEntryModal
+        isOpen={showNameModal}
+        onClose={() => setShowNameModal(false)}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 
 // Check if environment variables are set
 const requiredEnvVars = {
@@ -31,6 +31,67 @@ const s3Client = new S3Client({
 
 const BUCKET_NAME = process.env.CLOUDFLARE_R2_BUCKET_NAME!;
 
+// Function to generate a unique filename
+async function generateUniqueFileName(
+  s3Client: S3Client,
+  bucketName: string,
+  baseFileName: string,
+  userName: string | null
+): Promise<string> {
+  const fileExtension = baseFileName.split('.').pop();
+  const baseName = baseFileName.replace(/\.[^/.]+$/, ""); // Remove extension
+  
+  // Create a clean version of the user name for the filename
+  const cleanUserName = userName ? userName.replace(/[^a-zA-Z0-9-_]/g, '_') : 'anonymous';
+  
+  // Create the base filename with user name
+  const userFileName = `${cleanUserName}_${baseName}`;
+  
+  // Check if this exact filename exists
+  const listCommand = new ListObjectsV2Command({
+    Bucket: bucketName,
+    Prefix: `engagement-photos/${userFileName}`,
+    MaxKeys: 1000, // Get all files with this prefix
+  });
+
+  try {
+    const response = await s3Client.send(listCommand);
+    const existingFiles = response.Contents || [];
+    
+    // Extract just the filenames (without path and extension)
+    const existingFileNames = existingFiles
+      .map(obj => obj.Key?.split('/').pop()?.replace(/\.[^/.]+$/, ""))
+      .filter(Boolean);
+    
+    // If the exact filename doesn't exist, use it
+    if (!existingFileNames.includes(userFileName)) {
+      return `engagement-photos/${userFileName}.${fileExtension}`;
+    }
+    
+    // Find the highest index for this filename
+    let maxIndex = 0;
+    const pattern = new RegExp(`^${userFileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}_(\\d+)$`);
+    
+    existingFileNames.forEach(name => {
+      const match = name?.match(pattern);
+      if (match) {
+        const index = parseInt(match[1], 10);
+        if (index > maxIndex) {
+          maxIndex = index;
+        }
+      }
+    });
+    
+    // Return filename with next index
+    return `engagement-photos/${userFileName}_${maxIndex + 1}.${fileExtension}`;
+  } catch (error) {
+    console.error('Error checking for existing files:', error);
+    // If there's an error checking, fall back to timestamp-based naming
+    const timestamp = Date.now();
+    return `engagement-photos/${cleanUserName}_${baseName}_${timestamp}.${fileExtension}`;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check if environment variables are properly set
@@ -46,6 +107,7 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const userName = formData.get('userName') as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -71,11 +133,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const fileExtension = file.name.split('.').pop();
-    const fileName = `engagement-photos/${timestamp}-${randomString}.${fileExtension}`;
+    // Generate unique filename using user name
+    const fileName = await generateUniqueFileName(s3Client, BUCKET_NAME, file.name, userName);
 
     // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -92,6 +151,7 @@ export async function POST(request: NextRequest) {
       Metadata: {
         originalName: file.name,
         uploadedAt: new Date().toISOString(),
+        userName: userName || 'anonymous',
       },
     });
 
@@ -101,11 +161,12 @@ export async function POST(request: NextRequest) {
     const publicUrl = `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${fileName}`;
 
     return NextResponse.json({
-      id: `${timestamp}-${randomString}`,
+      id: fileName.split('/').pop()?.split('.')[0] || '',
       name: file.name,
       url: publicUrl,
       size: file.size,
       type: file.type,
+      fileName: fileName,
     });
 
   } catch (error) {

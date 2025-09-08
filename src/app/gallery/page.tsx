@@ -9,7 +9,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
-import ThemeToggle from "../components/ThemeToggle";
+import NameChangeButton from "../components/NameChangeButton";
 import Image from "next/image";
 
 interface Photo {
@@ -149,7 +149,9 @@ export default function Gallery() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[var(--background)] via-[var(--background)] to-[var(--card-bg)]">
-      <ThemeToggle />
+      <div className="flex justify-start items-center p-4">
+        <NameChangeButton />
+      </div>
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
