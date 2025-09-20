@@ -9,7 +9,12 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'pub-030137081fe8438cb99cdd5dd81bac6e.r2.dev',
+        hostname: 'omar-lynn.8a8006d7d7b27c2d30c6545a55b3f774.r2.dev',
+        pathname: '/**', // all paths
+      },
+      {
+        protocol: 'https',
+        hostname: '**',
         pathname: '/**', // all paths
       },
     ],

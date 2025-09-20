@@ -117,18 +117,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
       return NextResponse.json(
-        { error: 'Only image files are allowed' },
+        { error: 'Only image and video files are allowed' },
         { status: 400 }
       );
     }
 
-    // Validate file size (10MB limit)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // Validate file size (40MB limit)
+    const maxSize = 40 * 1024 * 1024; // 40MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File size must be less than 10MB' },
+        { error: 'File size must be less than 40MB' },
         { status: 400 }
       );
     }

@@ -19,6 +19,7 @@ interface Photo {
   size: number;
   uploadedAt: string;
   key: string;
+  type?: string;
 }
 
 interface PhotosResponse {
@@ -136,6 +137,14 @@ export default function Gallery() {
     return Math.random() * 20 - 10; // Random between -10 and 10 degrees
   };
 
+  // Check if file is a video
+  const isVideo = (photo: Photo) => {
+    return (
+      photo.type?.startsWith("video/") ||
+      photo.name.match(/\.(mp4|mov|avi|webm|mkv)$/i)
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[var(--background)] via-[var(--background)] to-[var(--card-bg)] flex items-center justify-center">
@@ -217,44 +226,114 @@ export default function Gallery() {
                     style={{ transform: `rotate(${getRandomRotation()}deg)` }}
                     onClick={() => setSelectedPhoto(photo)}
                   >
-                    {/* Polaroid Container */}
-                    <div className="bg-[var(--card-bg)] p-3 pb-8 rounded-sm shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-[var(--card-border)]">
-                      {/* Image Container */}
-                      <div className="aspect-square bg-[var(--input-bg)] relative overflow-hidden mb-3">
-                        <Image
-                          src={photo.url}
-                          alt={photo.name}
-                          width={1000}
-                          height={1000}
-                          className="w-full h-full object-cover"
-                        />
-                        {/* <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              downloadPhoto(photo);
-                            }}
-                            className="bg-[var(--accent-primary)] text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-[var(--accent-hover)]"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                        </div> */}
-                      </div>
-
-                      {/* Polaroid Caption Area */}
-                      <div className="px-2">
-                        <p className="text-sm font-medium text-[var(--text-primary)] truncate mb-1">
-                          {photo.name}
-                        </p>
-                        <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {formatDate(photo.uploadedAt)}
+                    {isVideo(photo) ? (
+                      /* Film Roll Container for Videos */
+                      <div className="relative">
+                        {/* Film Roll Top */}
+                        <div className="bg-black h-4 flex items-center justify-center">
+                          <div className="flex gap-1">
+                            {[...Array(8)].map((_, i) => (
+                              <div
+                                key={i}
+                                className="w-1 h-2 bg-gray-600 rounded-sm"
+                              ></div>
+                            ))}
                           </div>
-                          <span>{formatFileSize(photo.size)}</span>
+                        </div>
+
+                        {/* Video Container */}
+                        <div className="bg-[var(--card-bg)] p-2 border-l-2 border-r-2 border-black">
+                          <div className="aspect-square bg-[var(--input-bg)] relative overflow-hidden">
+                            <video
+                              src={photo.url}
+                              className="w-full h-full object-cover"
+                              muted
+                              loop
+                              onMouseEnter={(e) => e.currentTarget.play()}
+                              onMouseLeave={(e) => e.currentTarget.pause()}
+                            />
+                            {/* Play button overlay */}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 group-hover:bg-opacity-10 transition-all duration-300">
+                              <div className="w-12 h-12 bg-white bg-opacity-80 rounded-full flex items-center justify-center">
+                                <div className="w-0 h-0 border-l-[8px] border-l-[var(--accent-primary)] border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent ml-1"></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Film Roll Bottom */}
+                        <div className="bg-black h-4 flex items-center justify-center">
+                          <div className="flex gap-1">
+                            {[...Array(8)].map((_, i) => (
+                              <div
+                                key={i}
+                                className="w-1 h-2 bg-gray-600 rounded-sm"
+                              ></div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Film Roll Sprocket Holes */}
+                        <div className="absolute left-0 top-4 bottom-4 w-2 flex flex-col justify-between">
+                          {[...Array(6)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="w-1 h-1 bg-gray-400 rounded-full"
+                            ></div>
+                          ))}
+                        </div>
+                        <div className="absolute right-0 top-4 bottom-4 w-2 flex flex-col justify-between">
+                          {[...Array(6)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="w-1 h-1 bg-gray-400 rounded-full"
+                            ></div>
+                          ))}
+                        </div>
+
+                        {/* Video Caption */}
+                        <div className="mt-2 px-2">
+                          <p className="text-sm font-medium text-[var(--text-primary)] truncate mb-1">
+                            {photo.name}
+                          </p>
+                          <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {formatDate(photo.uploadedAt)}
+                            </div>
+                            <span>{formatFileSize(photo.size)}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      /* Polaroid Container for Images */
+                      <div className="bg-[var(--card-bg)] p-3 pb-8 rounded-sm shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-[var(--card-border)]">
+                        {/* Image Container */}
+                        <div className="aspect-square bg-[var(--input-bg)] relative overflow-hidden mb-3">
+                          <Image
+                            src={photo.url}
+                            alt={photo.name}
+                            width={1000}
+                            height={1000}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        {/* Polaroid Caption Area */}
+                        <div className="px-2">
+                          <p className="text-sm font-medium text-[var(--text-primary)] truncate mb-1">
+                            {photo.name}
+                          </p>
+                          <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {formatDate(photo.uploadedAt)}
+                            </div>
+                            <span>{formatFileSize(photo.size)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -296,19 +375,29 @@ export default function Gallery() {
         )}
       </div>
 
-      {/* Photo Modal */}
+      {/* Photo/Video Modal */}
       {selectedPhoto && (
         <div
           className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
           onClick={() => setSelectedPhoto(null)}
         >
           <div className="relative max-w-4xl max-h-full">
-            <img
-              src={selectedPhoto.url}
-              alt={selectedPhoto.name}
-              className="max-w-full max-h-full object-contain rounded-lg"
-              onClick={(e) => e.stopPropagation()}
-            />
+            {isVideo(selectedPhoto) ? (
+              <video
+                src={selectedPhoto.url}
+                controls
+                className="max-w-full max-h-full object-contain rounded-lg"
+                onClick={(e) => e.stopPropagation()}
+                autoPlay
+              />
+            ) : (
+              <img
+                src={selectedPhoto.url}
+                alt={selectedPhoto.name}
+                className="max-w-full max-h-full object-contain rounded-lg"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
             <div className="absolute top-4 right-4 flex gap-2">
               <button
                 onClick={(e) => {

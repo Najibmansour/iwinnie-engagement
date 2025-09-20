@@ -67,7 +67,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the app.
 The app can be deployed to any platform that supports Next.js. Make sure to:
 
 1. Set all environment variables
-2. Configure the platform to handle larger file uploads (up to 10MB)
+2. Configure the platform to handle larger file uploads (up to 40MB)
 3. Ensure proper CORS configuration
 
 ## Environment Variables
@@ -82,8 +82,8 @@ The app can be deployed to any platform that supports Next.js. Make sure to:
 
 ## File Upload Limits
 
-- **File Types**: Images only (JPG, PNG, GIF, etc.)
-- **File Size**: Maximum 10MB per file
+- **File Types**: Images and Videos (JPG, PNG, GIF, MP4, MOV, etc.)
+- **File Size**: Maximum 40MB per file
 - **Multiple Files**: Upload multiple files at once
 
 ## Customization

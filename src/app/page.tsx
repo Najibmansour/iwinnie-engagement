@@ -43,15 +43,27 @@ export default function Home() {
   }, [hasEnteredName]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const imageFiles = acceptedFiles.filter((file) =>
-      file.type.startsWith("image/")
+    console.log(
+      "Files received:",
+      acceptedFiles.map((f) => ({ name: f.name, type: f.type }))
     );
-    setFiles((prev) => [...prev, ...imageFiles]);
+    const mediaFiles = acceptedFiles.filter(
+      (file) => file.type.startsWith("image/") || file.type.startsWith("video/")
+    );
+    console.log(
+      "Filtered media files:",
+      mediaFiles.map((f) => ({ name: f.name, type: f.type }))
+    );
+    setFiles((prev) => [...prev, ...mediaFiles]);
     setError(null);
   }, []);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
+    console.log(
+      "Selected files:",
+      selectedFiles.map((f) => ({ name: f.name, type: f.type }))
+    );
     onDrop(selectedFiles);
   };
 
@@ -102,7 +114,7 @@ export default function Home() {
 
       setFiles([]);
       setSuccess(
-        `${files.length} photo${
+        `${files.length} file${
           files.length > 1 ? "s" : ""
         } uploaded successfully!`
       );
@@ -140,11 +152,11 @@ export default function Home() {
             <div className="text-center mb-6">
               <Camera className="w-12 h-12 text-[var(--accent-primary)] mx-auto mb-4" />
               <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-2">
-                Upload Your Photos
+                Upload Your Photos & Videos
               </h2>
               <p className="text-[var(--text-secondary)]">
-                Select photos from your engagement celebration to share with
-                everyone
+                Select photos and videos from your engagement celebration to
+                share with everyone
               </p>
             </div>
 
@@ -153,7 +165,7 @@ export default function Home() {
               <input
                 type="file"
                 multiple
-                accept="image/*"
+                accept="image/*,video/*,.mp4,.mov,.avi,.webm,.mkv,.wmv,.flv,.m4v"
                 onChange={handleFileSelect}
                 className="hidden"
                 id="file-upload"
@@ -162,10 +174,10 @@ export default function Home() {
               <label htmlFor="file-upload" className="cursor-pointer block">
                 <Upload className="w-12 h-12 text-[var(--accent-primary)] mx-auto mb-4" />
                 <p className="text-lg font-medium text-[var(--text-primary)] mb-2">
-                  Click to select photos or drag and drop
+                  Click to select files or drag and drop
                 </p>
                 <p className="text-sm text-[var(--text-muted)]">
-                  Supports JPG, PNG, GIF up to 10MB each
+                  Supports JPG, PNG, GIF, MP4, MOV up to 40MB each
                 </p>
               </label>
             </div>
@@ -174,17 +186,25 @@ export default function Home() {
             {files.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-lg font-medium text-[var(--text-primary)] mb-4">
-                  Selected Photos ({files.length})
+                  Selected Files ({files.length})
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {files.map((file, index) => (
                     <div key={index} className="relative group">
                       <div className="aspect-square bg-[var(--input-bg)] rounded-lg overflow-hidden">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={file.name}
-                          className="w-full h-full object-cover"
-                        />
+                        {file.type.startsWith("video/") ? (
+                          <video
+                            src={URL.createObjectURL(file)}
+                            className="w-full h-full object-cover"
+                            muted
+                          />
+                        ) : (
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
                       </div>
                       <button
                         onClick={() => removeFile(index)}
@@ -213,7 +233,7 @@ export default function Home() {
                     ) : (
                       <>
                         <Upload className="w-4 h-4" />
-                        Upload Photos
+                        Upload Files
                       </>
                     )}
                   </button>
