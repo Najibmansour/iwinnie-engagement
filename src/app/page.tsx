@@ -94,6 +94,8 @@ export default function Home() {
         });
 
         if (!response.ok) {
+          console.log(response);
+
           throw new Error(`Failed to upload ${file.name}`);
         }
 
