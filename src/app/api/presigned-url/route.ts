@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file size (40MB limit)
-    const maxSize = 40 * 1024 * 1024; // 40MB
+    const maxSize = 100 * 1024 * 1024; // 40MB
     if (fileSize > maxSize) {
       logger.apiResponse('POST', '/api/presigned-url', 400, Date.now() - startTime, {
         error: 'File too large',

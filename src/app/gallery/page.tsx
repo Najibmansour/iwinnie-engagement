@@ -160,6 +160,7 @@ export default function Gallery() {
     <div className="min-h-screen bg-gradient-to-br from-[var(--background)] via-[var(--background)] to-[var(--card-bg)]">
       <div className="flex justify-start items-center p-4">
         <NameChangeButton />
+        <button onClick={() => console.log(photos)}>photos log</button>
       </div>
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
@@ -311,6 +312,7 @@ export default function Gallery() {
                         {/* Image Container */}
                         <div className="aspect-square bg-[var(--input-bg)] relative overflow-hidden mb-3">
                           <Image
+                            unoptimized
                             src={photo.url}
                             alt={photo.name}
                             width={1000}
