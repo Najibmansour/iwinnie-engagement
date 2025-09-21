@@ -82,31 +82,50 @@ export default function Home() {
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("userName", userName || "");
 
         setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
 
-        const response = await fetch("/api/upload", {
+        // Step 1: Get presigned URL
+        const presignedResponse = await fetch("/api/presigned-url", {
           method: "POST",
-          body: formData,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            userName: userName || "",
+          }),
         });
 
-        if (!response.ok) {
-          console.log(response);
-
-          throw new Error(`Failed to upload ${file.name}`);
+        if (!presignedResponse.ok) {
+          throw new Error(`Failed to get upload URL for ${file.name}`);
         }
 
-        const result = await response.json();
+        const presignedData = await presignedResponse.json();
+
+        setUploadProgress((prev) => ({ ...prev, [file.name]: 25 }));
+
+        // Step 2: Upload directly to R2 using presigned URL
+        const uploadResponse = await fetch(presignedData.presignedUrl, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type,
+          },
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload ${file.name} to storage`);
+        }
 
         setUploadedFiles((prev) => [
           ...prev,
           {
-            id: result.id,
+            id: presignedData.fileName.split('/').pop()?.split('.')[0] || '',
             name: file.name,
-            url: result.url,
+            url: presignedData.publicUrl,
             uploadedAt: new Date(),
           },
         ]);

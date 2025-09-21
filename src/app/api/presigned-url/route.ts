@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { logger } from '@/lib/logger';
 
 // Check if environment variables are set
@@ -17,7 +18,7 @@ const missingEnvVars = Object.entries(requiredEnvVars)
   .map(([key]) => key);
 
 if (missingEnvVars.length > 0) {
-  logger.configError('upload-api', missingEnvVars);
+  logger.configError('presigned-url-api', missingEnvVars);
 }
 
 // Initialize S3 client for Cloudflare R2
@@ -41,13 +42,13 @@ async function generateUniqueFileName(
 ): Promise<string> {
   const fileExtension = baseFileName.split('.').pop();
   const baseName = baseFileName.replace(/\.[^/.]+$/, ""); // Remove extension
-  
+
   // Create a clean version of the user name for the filename
   const cleanUserName = userName ? userName.replace(/[^a-zA-Z0-9-_]/g, '_') : 'anonymous';
-  
+
   // Create the base filename with user name
   const userFileName = `${cleanUserName}_${baseName}`;
-  
+
   // Check if this exact filename exists
   const listCommand = new ListObjectsV2Command({
     Bucket: bucketName,
@@ -67,21 +68,21 @@ async function generateUniqueFileName(
       user_filename: userFileName,
       existing_files_count: existingFiles.length
     });
-    
+
     // Extract just the filenames (without path and extension)
     const existingFileNames = existingFiles
       .map(obj => obj.Key?.split('/').pop()?.replace(/\.[^/.]+$/, ""))
       .filter(Boolean);
-    
+
     // If the exact filename doesn't exist, use it
     if (!existingFileNames.includes(userFileName)) {
       return `engagement-photos/${userFileName}.${fileExtension}`;
     }
-    
+
     // Find the highest index for this filename
     let maxIndex = 0;
     const pattern = new RegExp(`^${userFileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}_(\\d+)$`);
-    
+
     existingFileNames.forEach(name => {
       const match = name?.match(pattern);
       if (match) {
@@ -91,7 +92,7 @@ async function generateUniqueFileName(
         }
       }
     });
-    
+
     // Return filename with next index
     return `engagement-photos/${userFileName}_${maxIndex + 1}.${fileExtension}`;
   } catch (error) {
@@ -108,12 +109,12 @@ async function generateUniqueFileName(
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
-  logger.apiRequest('POST', '/api/upload');
+  logger.apiRequest('POST', '/api/presigned-url');
 
   try {
     // Check if environment variables are properly set
     if (missingEnvVars.length > 0) {
-      logger.apiResponse('POST', '/api/upload', 500, Date.now() - startTime, {
+      logger.apiResponse('POST', '/api/presigned-url', 500, Date.now() - startTime, {
         error: 'Missing environment variables',
         missing_vars: missingEnvVars
       });
@@ -126,34 +127,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const userName = formData.get('userName') as string | null;
+    const body = await request.json();
+    const { fileName, fileType, fileSize, userName } = body;
 
-    logger.debug('Upload request details', {
-      has_file: !!file,
-      user_name: userName,
-      file_name: file?.name,
-      file_size: file?.size,
-      file_type: file?.type
+    logger.debug('Presigned URL request details', {
+      file_name: fileName,
+      file_type: fileType,
+      file_size: fileSize,
+      user_name: userName
     });
 
-    if (!file) {
-      logger.apiResponse('POST', '/api/upload', 400, Date.now() - startTime, {
-        error: 'No file provided'
+    if (!fileName || !fileType || !fileSize) {
+      logger.apiResponse('POST', '/api/presigned-url', 400, Date.now() - startTime, {
+        error: 'Missing required fields'
       });
       return NextResponse.json(
-        { error: 'No file provided' },
+        { error: 'Missing required fields: fileName, fileType, fileSize' },
         { status: 400 }
       );
     }
 
     // Validate file type
-    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-      logger.apiResponse('POST', '/api/upload', 400, Date.now() - startTime, {
+    if (!fileType.startsWith('image/') && !fileType.startsWith('video/')) {
+      logger.apiResponse('POST', '/api/presigned-url', 400, Date.now() - startTime, {
         error: 'Invalid file type',
-        file_type: file.type,
-        file_name: file.name
+        file_type: fileType,
+        file_name: fileName
       });
       return NextResponse.json(
         { error: 'Only image and video files are allowed' },
@@ -163,12 +162,12 @@ export async function POST(request: NextRequest) {
 
     // Validate file size (40MB limit)
     const maxSize = 40 * 1024 * 1024; // 40MB
-    if (file.size > maxSize) {
-      logger.apiResponse('POST', '/api/upload', 400, Date.now() - startTime, {
+    if (fileSize > maxSize) {
+      logger.apiResponse('POST', '/api/presigned-url', 400, Date.now() - startTime, {
         error: 'File too large',
-        file_size: file.size,
+        file_size: fileSize,
         max_size: maxSize,
-        file_name: file.name
+        file_name: fileName
       });
       return NextResponse.json(
         { error: 'File size must be less than 40MB' },
@@ -177,77 +176,71 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate unique filename using user name
-    const fileName = await generateUniqueFileName(s3Client, BUCKET_NAME, file.name, userName);
+    const uniqueFileName = await generateUniqueFileName(s3Client, BUCKET_NAME, fileName, userName);
 
-    logger.info('Generated unique filename', {
-      original_name: file.name,
-      generated_name: fileName,
+    logger.info('Generated unique filename for presigned URL', {
+      original_name: fileName,
+      generated_name: uniqueFileName,
       user_name: userName
     });
 
-    // Convert file to buffer
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    logger.r2Operation('upload', BUCKET_NAME, fileName, {
-      file_size: file.size,
-      content_type: file.type,
-      user_name: userName,
-      original_name: file.name
-    });
-
-    // Upload to R2
-    const uploadCommand = new PutObjectCommand({
+    // Create presigned URL for upload
+    const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
-      Key: fileName,
-      Body: buffer,
-      ContentType: file.type,
+      Key: uniqueFileName,
+      ContentType: fileType,
       Metadata: {
-        originalName: file.name,
+        originalName: fileName,
         uploadedAt: new Date().toISOString(),
         userName: userName || 'anonymous',
       },
     });
 
-    await s3Client.send(uploadCommand);
-
-    logger.info('File uploaded successfully', {
-      bucket: BUCKET_NAME,
-      key: fileName,
-      size: file.size,
-      type: file.type
+    const presignedUrl = await getSignedUrl(s3Client, command, {
+      expiresIn: 3600 // 1 hour
     });
 
-    // Generate public URL
-    const publicUrl = `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${fileName}`;
+    logger.r2Operation('generate-presigned-url', BUCKET_NAME, uniqueFileName, {
+      file_size: fileSize,
+      content_type: fileType,
+      user_name: userName,
+      original_name: fileName,
+      expires_in: 3600
+    });
+
+    // Generate public URL for after upload
+    const publicUrl = `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${uniqueFileName}`;
 
     const responseData = {
-      id: fileName.split('/').pop()?.split('.')[0] || '',
-      name: file.name,
-      url: publicUrl,
-      size: file.size,
-      type: file.type,
-      fileName: fileName,
+      presignedUrl,
+      fileName: uniqueFileName,
+      publicUrl,
+      metadata: {
+        originalName: fileName,
+        userName: userName || 'anonymous',
+        uploadedAt: new Date().toISOString(),
+      }
     };
 
-    logger.apiResponse('POST', '/api/upload', 200, Date.now() - startTime, {
-      file_name: fileName,
-      file_size: file.size,
+    logger.apiResponse('POST', '/api/presigned-url', 200, Date.now() - startTime, {
+      file_name: uniqueFileName,
+      file_size: fileSize,
       public_url: publicUrl
     });
 
     return NextResponse.json(responseData);
 
   } catch (error) {
-    logger.r2Error('upload', error, BUCKET_NAME, undefined, {
+    logger.r2Error('generate-presigned-url', error, BUCKET_NAME, undefined, {
       request_url: request.url
     });
 
-    logger.apiResponse('POST', '/api/upload', 500, Date.now() - startTime, {
-      error: 'Failed to upload file'
+    logger.apiResponse('POST', '/api/presigned-url', 500, Date.now() - startTime, {
+      error: 'Failed to generate presigned URL'
     });
 
     return NextResponse.json(
-      { error: 'Failed to upload file', message: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to generate presigned URL', message: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
