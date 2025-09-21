@@ -25,21 +25,11 @@ class Logger {
   }
 
   info(message: string, context?: LogContext): void {
-    const formattedMessage = this.formatMessage('info', message, context);
-    console.log(formattedMessage);
-    // Force flush for Vercel
-    if (typeof process !== 'undefined' && process.stdout) {
-      process.stdout.write(formattedMessage + '\n');
-    }
+    console.log(this.formatMessage('info', message, context));
   }
 
   warn(message: string, context?: LogContext): void {
-    const formattedMessage = this.formatMessage('warn', message, context);
-    console.warn(formattedMessage);
-    // Force flush for Vercel
-    if (typeof process !== 'undefined' && process.stderr) {
-      process.stderr.write(formattedMessage + '\n');
-    }
+    console.warn(this.formatMessage('warn', message, context));
   }
 
   error(message: string, error?: ErrorWithStack | unknown, context?: LogContext): void {
@@ -57,12 +47,7 @@ class Logger {
       errorContext.error = error;
     }
 
-    const formattedMessage = this.formatMessage('error', message, errorContext);
-    console.error(formattedMessage);
-    // Force flush for Vercel
-    if (typeof process !== 'undefined' && process.stderr) {
-      process.stderr.write(formattedMessage + '\n');
-    }
+    console.error(this.formatMessage('error', message, errorContext));
   }
 
   debug(message: string, context?: LogContext): void {
