@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { logger } from '@/lib/logger';
 
 // Check if environment variables are set
 const requiredEnvVars = {
@@ -16,7 +17,7 @@ const missingEnvVars = Object.entries(requiredEnvVars)
   .map(([key]) => key);
 
 if (missingEnvVars.length > 0) {
-  console.error('Missing environment variables:', missingEnvVars);
+  logger.configError('photos-api', missingEnvVars);
 }
 
 // Initialize S3 client for Cloudflare R2
@@ -33,13 +34,24 @@ const BUCKET_NAME = process.env.CLOUDFLARE_R2_BUCKET_NAME!;
 const PUBLIC_URL = process.env.CLOUDFLARE_R2_PUBLIC_URL!;
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const url = new URL(request.url);
+
+  logger.apiRequest('GET', '/api/photos', {
+    searchParams: Object.fromEntries(url.searchParams.entries())
+  });
+
   try {
     // Check if environment variables are properly set
     if (missingEnvVars.length > 0) {
+      logger.apiResponse('GET', '/api/photos', 500, Date.now() - startTime, {
+        error: 'Missing environment variables',
+        missing_vars: missingEnvVars
+      });
       return NextResponse.json(
-        { 
-          error: 'Server configuration error', 
-          message: `Missing environment variables: ${missingEnvVars.join(', ')}` 
+        {
+          error: 'Server configuration error',
+          message: `Missing environment variables: ${missingEnvVars.join(', ')}`
         },
         { status: 500 }
       );
@@ -49,6 +61,11 @@ export async function GET(request: NextRequest) {
     const prefix = searchParams.get('prefix') || 'engagement-photos/';
     const maxKeys = parseInt(searchParams.get('maxKeys') || '50');
 
+    logger.r2Operation('list', BUCKET_NAME, prefix, {
+      prefix,
+      maxKeys
+    });
+
     const listCommand = new ListObjectsV2Command({
       Bucket: BUCKET_NAME,
       Prefix: prefix,
@@ -56,6 +73,11 @@ export async function GET(request: NextRequest) {
     });
 
     const response = await s3Client.send(listCommand);
+
+    logger.debug('R2 List Response', {
+      found_objects: response.Contents?.length || 0,
+      is_truncated: response.IsTruncated
+    });
 
     if (!response.Contents) {
       return NextResponse.json({ photos: [] });
@@ -79,16 +101,30 @@ export async function GET(request: NextRequest) {
         return 0;
       });
 
-    return NextResponse.json({
+    const responseData = {
       photos,
       count: photos.length,
       hasMore: response.IsTruncated || false,
+    };
+
+    logger.apiResponse('GET', '/api/photos', 200, Date.now() - startTime, {
+      photos_count: photos.length,
+      has_more: response.IsTruncated || false
     });
 
+    return NextResponse.json(responseData);
+
   } catch (error) {
-    console.error('Error listing photos:', error);
+    logger.r2Error('list', error, BUCKET_NAME, undefined, {
+      request_url: request.url
+    });
+
+    logger.apiResponse('GET', '/api/photos', 500, Date.now() - startTime, {
+      error: 'Failed to list photos'
+    });
+
     return NextResponse.json(
-      { error: 'Failed to list photos', message: error },
+      { error: 'Failed to list photos', message: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

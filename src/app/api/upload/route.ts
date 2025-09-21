@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { logger } from '@/lib/logger';
 
 // Check if environment variables are set
 const requiredEnvVars = {
@@ -16,7 +17,7 @@ const missingEnvVars = Object.entries(requiredEnvVars)
   .map(([key]) => key);
 
 if (missingEnvVars.length > 0) {
-  console.error('Missing environment variables:', missingEnvVars);
+  logger.configError('upload-api', missingEnvVars);
 }
 
 // Initialize S3 client for Cloudflare R2
@@ -55,8 +56,17 @@ async function generateUniqueFileName(
   });
 
   try {
+    logger.r2Operation('list-check-duplicates', bucketName, `engagement-photos/${userFileName}`, {
+      checking_for: userFileName
+    });
+
     const response = await s3Client.send(listCommand);
     const existingFiles = response.Contents || [];
+
+    logger.debug('Duplicate check result', {
+      user_filename: userFileName,
+      existing_files_count: existingFiles.length
+    });
     
     // Extract just the filenames (without path and extension)
     const existingFileNames = existingFiles
@@ -85,7 +95,10 @@ async function generateUniqueFileName(
     // Return filename with next index
     return `engagement-photos/${userFileName}_${maxIndex + 1}.${fileExtension}`;
   } catch (error) {
-    console.error('Error checking for existing files:', error);
+    logger.r2Error('list-check-duplicates', error, bucketName, undefined, {
+      user_filename: userFileName,
+      fallback_to_timestamp: true
+    });
     // If there's an error checking, fall back to timestamp-based naming
     const timestamp = Date.now();
     return `engagement-photos/${cleanUserName}_${baseName}_${timestamp}.${fileExtension}`;
@@ -93,9 +106,17 @@ async function generateUniqueFileName(
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
+  logger.apiRequest('POST', '/api/upload');
+
   try {
     // Check if environment variables are properly set
     if (missingEnvVars.length > 0) {
+      logger.apiResponse('POST', '/api/upload', 500, Date.now() - startTime, {
+        error: 'Missing environment variables',
+        missing_vars: missingEnvVars
+      });
       return NextResponse.json(
         {
           error: 'Server configuration error',
@@ -109,7 +130,18 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
     const userName = formData.get('userName') as string | null;
 
+    logger.debug('Upload request details', {
+      has_file: !!file,
+      user_name: userName,
+      file_name: file?.name,
+      file_size: file?.size,
+      file_type: file?.type
+    });
+
     if (!file) {
+      logger.apiResponse('POST', '/api/upload', 400, Date.now() - startTime, {
+        error: 'No file provided'
+      });
       return NextResponse.json(
         { error: 'No file provided' },
         { status: 400 }
@@ -118,6 +150,11 @@ export async function POST(request: NextRequest) {
 
     // Validate file type
     if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      logger.apiResponse('POST', '/api/upload', 400, Date.now() - startTime, {
+        error: 'Invalid file type',
+        file_type: file.type,
+        file_name: file.name
+      });
       return NextResponse.json(
         { error: 'Only image and video files are allowed' },
         { status: 400 }
@@ -127,6 +164,12 @@ export async function POST(request: NextRequest) {
     // Validate file size (40MB limit)
     const maxSize = 40 * 1024 * 1024; // 40MB
     if (file.size > maxSize) {
+      logger.apiResponse('POST', '/api/upload', 400, Date.now() - startTime, {
+        error: 'File too large',
+        file_size: file.size,
+        max_size: maxSize,
+        file_name: file.name
+      });
       return NextResponse.json(
         { error: 'File size must be less than 40MB' },
         { status: 400 }
@@ -136,11 +179,21 @@ export async function POST(request: NextRequest) {
     // Generate unique filename using user name
     const fileName = await generateUniqueFileName(s3Client, BUCKET_NAME, file.name, userName);
 
+    logger.info('Generated unique filename', {
+      original_name: file.name,
+      generated_name: fileName,
+      user_name: userName
+    });
+
     // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    console.log('Uploading to bucket:', BUCKET_NAME);
-    console.log('File name:', fileName);
+    logger.r2Operation('upload', BUCKET_NAME, fileName, {
+      file_size: file.size,
+      content_type: file.type,
+      user_name: userName,
+      original_name: file.name
+    });
 
     // Upload to R2
     const uploadCommand = new PutObjectCommand({
@@ -157,22 +210,44 @@ export async function POST(request: NextRequest) {
 
     await s3Client.send(uploadCommand);
 
+    logger.info('File uploaded successfully', {
+      bucket: BUCKET_NAME,
+      key: fileName,
+      size: file.size,
+      type: file.type
+    });
+
     // Generate public URL
     const publicUrl = `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${fileName}`;
 
-    return NextResponse.json({
+    const responseData = {
       id: fileName.split('/').pop()?.split('.')[0] || '',
       name: file.name,
       url: publicUrl,
       size: file.size,
       type: file.type,
       fileName: fileName,
+    };
+
+    logger.apiResponse('POST', '/api/upload', 200, Date.now() - startTime, {
+      file_name: fileName,
+      file_size: file.size,
+      public_url: publicUrl
     });
 
+    return NextResponse.json(responseData);
+
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.r2Error('upload', error, BUCKET_NAME, undefined, {
+      request_url: request.url
+    });
+
+    logger.apiResponse('POST', '/api/upload', 500, Date.now() - startTime, {
+      error: 'Failed to upload file'
+    });
+
     return NextResponse.json(
-      { error: 'Failed to upload file', message: error },
+      { error: 'Failed to upload file', message: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

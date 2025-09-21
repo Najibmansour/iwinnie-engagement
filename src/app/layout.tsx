@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { UserProvider } from "./contexts/UserContext";
+import { logServerStartup } from "@/lib/config-validator";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,6 +25,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Log server startup and validate configuration on server-side
+  if (typeof window === 'undefined') {
+    logServerStartup();
+  }
+
   return (
     <html lang="en">
       <body
